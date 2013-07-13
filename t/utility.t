@@ -75,7 +75,7 @@ describe 'template' => sub {
         is($backslashTemplate->({thing => 'This'}), "This is \\ridanculous");
     };
 
-    it 'can run arbitrary javascript in templates' => sub {
+    it 'can run arbitrary perl in templates' => sub {
         my $fancyTemplate = _->template(
             '<ul><% foreach my $key (sort keys %$people) { %><li><%= $people->{$key} %></li><% } %></ul>'
         );
@@ -99,7 +99,7 @@ describe 'template' => sub {
         is($quoteTemplate->({}), "It's its, not it's");
     };
 
-    it 'quotes in statemets and body' => sub {
+    it 'quotes in statements and body' => sub {
         my $quoteInStatementAndBody = _->template(
             q!<% if($foo eq 'bar'){ %>Statement quotes and 'quotes'.<% } %>!);
         is($quoteInStatementAndBody->({foo => "bar"}),
@@ -121,7 +121,7 @@ describe 'template' => sub {
             interpolate => qr/\{\{=([\s\S]+?)\}\}/
         );
 
-        it 'can run arbitrary javascript in templates' => sub {
+        it 'can run arbitrary perl in templates' => sub {
             my $custom = $u->template(
                 q!<ul>{{ foreach my $key (sort keys %$people) { }}<li>{{= $people->{$key} }}</li>{{ } }}</ul>!
             );
@@ -154,7 +154,7 @@ describe 'template' => sub {
             interpolate => qr/<\?=([\s\S]+?)\?>/
         );
 
-        it 'can run arbitrary javascript in templates' => sub {
+        it 'can run arbitrary perl in templates' => sub {
             my $customWithSpecialChars = $u->template(q!<ul><? foreach my $key (sort keys %$people) { ?><li><?= $people->{$key} ?></li><? } ?></ul>!);
             my $result = $customWithSpecialChars->({people => {moe  =>  "Moe", larry  =>  "Larry", curly  =>  "Curly"}});
             is($result, "<ul><li>Curly</li><li>Larry</li><li>Moe</li></ul>");
