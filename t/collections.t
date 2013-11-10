@@ -464,7 +464,9 @@ describe 'sort' => sub {
 
 describe 'sortBy' => sub {
     my $people =
-          [{name => 'curly', age => 30}, {name => 'rab', age => 10}, {name => 'moe', age => 50}];
+          [{name => 'curly', age => 30},
+           {name => 'rab', age => 10},
+           {name => 'moe', age => 50}];
     it 'stooges sorted by age' => sub {
         $people = _->sortBy($people,
             sub { my ($person) = @_; return $person->{age}; });
@@ -476,6 +478,10 @@ describe 'sortBy' => sub {
             undef,
             sub { my ($a, $b) = @_; $a cmp $b; });
         is(join(', ', @{_->pluck($people, 'name')}), 'curly, moe, rab');
+    };
+    it 'uses identity when iterator is not supplied' => sub {
+        $people = _->sortBy($people);
+        is(join(', ', @{_->pluck($people, 'name')}), 'curly, rab, moe');
     };
 };
 

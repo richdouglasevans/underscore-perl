@@ -146,7 +146,6 @@ describe 'clone' => sub {
     };
 };
 
-# TODO
 describe 'isEqual' => sub {
    it 'must compare object deeply' => sub {
        my $moe   = {name => 'moe', lucky => [13, 27, 34]};

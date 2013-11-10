@@ -81,10 +81,10 @@ sub include {
     my $self = shift;
     my ($list, $value) = $self->_prepare(@_);
 
-    if (ref $list eq 'ARRAY') {
+    if ($self->_isArray($list)) {
         return (List::Util::first { $_ eq $value } @$list) ? 1 : 0;
     }
-    elsif (ref $list eq 'HASH') {
+    elsif ($self->_isHash($list)) {
         return (List::Util::first { $_ eq $value } values %$list) ? 1 : 0;
     }
 
@@ -195,7 +195,7 @@ sub invoke {
 
     foreach (@$list) {
         push @$result,
-          [ref $method eq 'CODE' ? $method->(@$_) : $self->$method(@$_)];
+          [$self->_isCodeRef($method) ? $method->(@$_) : $self->$method(@$_)];
     }
 
     return $result;
@@ -268,6 +268,9 @@ sub sortBy {&sort_by}
 sub sort_by {
     my $self = shift;
     my ($list, $iterator, $context, $comparator) = $self->_prepare(@_);
+    if (!defined $iterator) {
+        $iterator = sub { return $self->identity(shift); }
+    }
 
     my $cmp = defined $comparator ? $comparator : sub { my ($x, $y) = @_; $x <=> $y } ;
 
@@ -362,23 +365,25 @@ sub sorted_index {
     my $self = shift;
     my ($list, $value, $iterator) = $self->_prepare(@_);
 
-    # TODO $iterator
+    $iterator = sub { shift; } if !defined $iterator;
 
     my $min = 0;
     my $max = @$list;
     my $mid;
+    my $it = sub { $iterator->(shift, $value, $list); };
+    my $value_ = $it->($value);
 
     do {
         $mid = int(($min + $max) / 2);
-        if ($value > $list->[$mid]) {
+        if ($value_ > $it->($list->[$mid])) {
             $min = $mid + 1;
         }
         else {
             $max = $mid - 1;
         }
-    } while ($list->[$mid] == $value || $min > $max);
+    } while ($it->($list->[$mid]) == $value_ || $min > $max);
 
-    if ($list->[$mid] == $value) {
+    if ($it->($list->[$mid]) == $value_) {
         return $mid;
     }
 
@@ -391,9 +396,9 @@ sub to_array {
     my $self = shift;
     my ($list) = $self->_prepare(@_);
 
-    return [values %$list] if ref $list eq 'HASH';
+    return [values %$list] if $self->_isHash($list);
 
-    return [$list] unless ref $list eq 'ARRAY';
+    return [$list] unless $self->_isArray($list);
 
     return [@$list];
 }
@@ -402,9 +407,9 @@ sub size {
     my $self = shift;
     my ($list) = $self->_prepare(@_);
 
-    return scalar @$list if ref $list eq 'ARRAY';
+    return scalar @$list if $self->_isArray($list);
 
-    return scalar keys %$list if ref $list eq 'HASH';
+    return scalar keys %$list if $self->_isHash($list);
 
     return 1;
 }
@@ -475,7 +480,7 @@ sub flatten {
     $cb = sub {
         my $result = [];
         foreach (@{$_[0]}) {
-            if (ref $_ eq 'ARRAY') {
+            if ($self->_isArray($_)) {
                 push @$result, @{$cb->($_)};
             }
             else {
@@ -720,7 +725,7 @@ sub result {
     my ($hash, $key, @args) = $self->_prepare(@_);
 
     my $value = $hash->{$key};
-    return ref $value eq 'CODE' ? $value->(@args) : $value;
+    return $self->_isCodeRef($value) ? $value->(@args) : $value;
 }
 
 sub times {
@@ -832,7 +837,7 @@ sub keys : method {
     my $self = shift;
     my ($object) = $self->_prepare(@_);
 
-    die 'Not a hash reference' unless ref $object && ref $object eq 'HASH';
+    die 'Not a hash reference' unless ref $object && $self->_isHash($object);
 
     return [keys %$object];
 }
@@ -841,7 +846,7 @@ sub values {
     my $self = shift;
     my ($object) = $self->_prepare(@_);
 
-    die 'Not a hash reference' unless ref $object && ref $object eq 'HASH';
+    die 'Not a hash reference' unless ref $object && $self->_isHash($object);
 
     return [values %$object];
 }
@@ -850,12 +855,12 @@ sub functions {
     my $self = shift;
     my ($object) = $self->_prepare(@_);
 
-    die 'Not a hash reference' unless ref $object && ref $object eq 'HASH';
+    die 'Not a hash reference' unless ref $object && $self->_isHash($object);
 
     my $functions = [];
     foreach (keys %$object) {
         push @$functions, $_
-          if ref $object->{$_} && ref $object->{$_} eq 'CODE';
+          if ref $object->{$_} && $self->_isCodeRef($object->{$_});
     }
     return $functions;
 }
@@ -919,10 +924,10 @@ sub is_empty {
     if (!ref $object) {
         return 1 if $object eq '';
     }
-    elsif (ref $object eq 'HASH') {
+    elsif ($self->_isHash($object)) {
         return 1 if !(keys %$object);
     }
-    elsif (ref $object eq 'ARRAY') {
+    elsif ($self->_isArray($object)) {
         return 1 if @$object == 0;
     }
     elsif (ref $object eq 'Regexp') {
@@ -938,7 +943,7 @@ sub is_array {
     my $self = shift;
     my ($object) = $self->_prepare(@_);
 
-    return 1 if defined $object && ref $object && ref $object eq 'ARRAY';
+    return 1 if defined $object && ref $object && $self->_isArray($object);
 
     return 0;
 }
@@ -980,7 +985,7 @@ sub is_function {
     my $self = shift;
     my ($object) = $self->_prepare(@_);
 
-    return 1 if defined $object && ref $object && ref $object eq 'CODE';
+    return 1 if defined $object && ref $object && $self->_isCodeRef($object);
 
     return 0;
 }
@@ -1005,6 +1010,11 @@ sub is_undefined {
     return 1 unless defined $object;
 
     return 0;
+}
+
+sub identity {
+    my ($self, $value) = @_;
+    return $value;
 }
 
 sub isBoolean {&is_boolean}
@@ -1035,6 +1045,24 @@ sub value {
     return wantarray ? @{$self->{args}} : $self->{args}->[0];
 }
 
+sub _isHash {
+    my ($self, $test) = @_;
+
+    return ref $test eq 'HASH';
+}
+
+sub _isArray {
+    my ($self, $test) = @_;
+
+    return ref $test eq 'ARRAY';
+}
+
+sub _isCodeRef {
+    my ($self, $test) = @_;
+
+    return ref $test eq 'CODE';
+}
+
 sub _prepare {
     my $self = shift;
     unshift @_, @{$self->{args}} if defined $self->{args} && @{$self->{args}};
@@ -1046,8 +1074,8 @@ sub _finalize {
 
     return
         $self->{chain} ? do { $self->{args} = [@_]; $self }
-      : wantarray      ? @_
-      :                  $_[0];
+      : wantarray ? @_
+                  : $_[0];
 }
 
 package Underscore::_True;
