@@ -485,6 +485,67 @@ describe 'sortBy' => sub {
     };
 };
 
+describe 'where' => sub {
+    my $people =
+          [{name => 'curly', age => 30},
+           {name => 'rab'},
+           {                 age => 50}];
+
+    it 'stooges have names' => sub {
+        my $stooges = _->where($people, ['name']);
+        is(join(', ', @{_->pluck($stooges, 'name')}), 'curly, rab');
+    };
+
+    it 'first stooge with name' => sub {
+        my $stooges = _->where($people, ['name'], 1);
+        is(join(', ', @{_->pluck($stooges, 'name')}), 'curly');
+    };
+
+    it 'first stooge with banjo' => sub {
+        my $stooges = _->where($people, ['banjo'], 1);
+        is(scalar @$stooges, 0);
+    };
+
+    it 'stooges have banjos' => sub {
+        my $stooges = _->where($people, ['banjo']);
+        is(scalar @$stooges, 0);
+    };
+
+    it 'empty list' => sub {
+        my $stooges = _->where([], ['name']);
+        is(scalar @$stooges, 0);
+    };
+
+    it 'empty attrs list' => sub {
+        my $stooges = _->where($people, []);
+        is(scalar @$stooges, 0);
+    };
+
+    it 'no complete matches' => sub {
+        my $stooges = _->where($people, ['name', 'banjo']);
+        is(scalar @$stooges, 0);
+    };
+};
+
+describe 'find where' => sub {
+    my $people =
+          [{name => 'curly', age => 30},
+           {name => 'rab'},
+           {                 age => 50}];
+
+    it 'first stooge with name' => sub {
+        my $stooges = _->find_where($people, ['name']);
+        is(scalar @$stooges, 1);
+        my $stooge = $stooges->[0];
+        is($stooge->{name}, 'curly');
+    };
+
+    it 'first stooge with banjo' => sub {
+        my $stooges = _->find_where($people, ['banjo']);
+        is(scalar @$stooges, 0);
+    }
+};
+
 describe 'groupBy' => sub {
     it 'put each even number in the right group' => sub {
         my $parity = _->groupBy([1, 2, 3, 4, 5, 6],

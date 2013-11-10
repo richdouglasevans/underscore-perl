@@ -279,6 +279,36 @@ sub sort_by {
     return $self->_finalize($result);
 }
 
+sub where {
+    my $self = shift;
+    my ($list, $attrs, $first) = $self->_prepare(@_);
+
+    my $iterator = sub {
+        my $obj = shift;
+        my $result = false;
+        for my $key (@$attrs) {
+            $result = exists $obj->{$key}
+        }
+        return $result;
+    };
+
+    no strict "refs";
+    my $method = $first ? 'find' : 'filter';
+    my $result = $self->$method($list, $iterator);
+    if ($first) {
+        $result = defined $result ? [$result] : [];
+    }
+    $self->_finalize($result);
+}
+
+sub findWhere {&find_where}
+
+sub find_where {
+    my $self = shift;
+    my ($list, $attrs) = $self->_prepare(@_);
+    return $self->where($list, $attrs, 1);
+}
+
 sub reverse : method {
     my $self = shift;
     my ($list) = $self->_prepare(@_);
