@@ -140,6 +140,11 @@ describe 'after' => sub {
     it 'does continue to call the subroutine after the threshold is reached' => sub {
         is($invoke_after->(5, 10), 6);
     };
+
+    my $explosion = sub { die "Must never be called."; };
+    it 'threshold of 0 never calls the subroutine' => sub {
+        ok(_->after(0, $explosion));
+    };
 };
 
 runtests unless caller;
